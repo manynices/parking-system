@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.experiment.parkingsystem.mapper.OwnerMapper">
+
+    <insert id="insert" parameterType="com.experiment.parkingsystem.entity.Owner">
+        INSERT INTO owner (owner_id, name, contact, address, id_card)
+        VALUES (#{ownerId}, #{name}, #{contact}, #{address}, #{idCard})
+    </insert>
+
+    <select id="findById" resultType="com.experiment.parkingsystem.entity.Owner">
+        SELECT owner_id, name, contact, address, id_card FROM owner WHERE owner_id = #{ownerId}
+    </select>
+
+    <select id="findAll" resultType="com.experiment.parkingsystem.entity.Owner">
+        SELECT owner_id, name, contact, address, id_card FROM owner
+        <where>
+            <if test="name != null and name != ''">
+                name LIKE CONCAT('%', #{name}, '%')
+            </if>
+        </where>
+        ORDER BY owner_id ASC
+    </select>
+
+    <update id="update" parameterType="com.experiment.parkingsystem.entity.Owner">
+        UPDATE owner
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="contact != null">contact = #{contact},</if>
+            <if test="address != null">address = #{address},</if>
+            <if test="idCard != null">id_card = #{idCard},</if>
+        </set>
+        WHERE owner_id = #{ownerId}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM owner WHERE owner_id = #{ownerId}
+    </delete>
+
+    <select id="existsById" resultType="int">
+        SELECT COUNT(*) FROM owner WHERE owner_id = #{ownerId}
+    </select>
+
+    <select id="findMaxOwnerId" resultType="string">
+        SELECT MAX(owner_id) FROM owner
+    </select>
+
+</mapper>
