@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.experiment.parkingsystem.mapper.VehicleMapper">
+
+    <insert id="insert" parameterType="com.experiment.parkingsystem.entity.Vehicle">
+        INSERT INTO vehicle (vehicle_id, license_plate, vehicle_type, owner_id, status)
+        VALUES (#{vehicleId}, #{licensePlate}, #{vehicleType}, #{ownerId}, #{status})
+    </insert>
+
+    <select id="findById" resultType="com.experiment.parkingsystem.entity.Vehicle">
+        SELECT vehicle_id, license_plate, vehicle_type, owner_id, status FROM vehicle WHERE vehicle_id = #{vehicleId}
+    </select>
+
+    <select id="findByCriteria" resultType="com.experiment.parkingsystem.entity.Vehicle">
+        SELECT vehicle_id, license_plate, vehicle_type, owner_id, status FROM vehicle
+        <where>
+            <if test="ownerId != null and ownerId != ''">
+                AND owner_id = #{ownerId}
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY vehicle_id ASC
+    </select>
+
+    <update id="update" parameterType="com.experiment.parkingsystem.entity.Vehicle">
+        UPDATE vehicle
+        <set>
+            <if test="licensePlate != null">license_plate = #{licensePlate},</if>
+            <if test="vehicleType != null">vehicle_type = #{vehicleType},</if>
+            <if test="ownerId != null">owner_id = #{ownerId},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE vehicle_id = #{vehicleId}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM vehicle WHERE vehicle_id = #{vehicleId}
+    </delete>
+
+    <select id="existsById" resultType="int">
+        SELECT COUNT(*) FROM vehicle WHERE vehicle_id = #{vehicleId}
+    </select>
+
+    <select id="findMaxVehicleId" resultType="string">
+        SELECT MAX(vehicle_id) FROM vehicle
+    </select>
+
+</mapper>
