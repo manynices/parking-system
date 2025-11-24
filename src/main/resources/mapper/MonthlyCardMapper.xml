@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.experiment.parkingsystem.mapper.MonthlyCardMapper">
+
+    <insert id="insert" parameterType="com.experiment.parkingsystem.entity.MonthlyCard">
+        INSERT INTO monthly_card (card_id, card_no, vehicle_id, issue_time, validity_period, renew_time, status, admin_id)
+        VALUES (#{cardId}, #{cardNo}, #{vehicleId}, #{issueTime}, #{validityPeriod}, #{renewTime}, #{status}, #{adminId})
+    </insert>
+
+    <select id="findById" resultType="com.experiment.parkingsystem.entity.MonthlyCard">
+        SELECT * FROM monthly_card WHERE card_no = #{cardNo}
+    </select>
+
+    <select id="findByCriteria" resultType="com.experiment.parkingsystem.entity.MonthlyCard">
+        SELECT * FROM monthly_card
+        <where>
+            <if test="vehicleId != null and vehicleId != ''">
+                AND vehicle_id = #{vehicleId}
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY issue_time DESC
+    </select>
+
+    <update id="update" parameterType="com.experiment.parkingsystem.entity.MonthlyCard">
+        UPDATE monthly_card
+        <set>
+            <if test="validityPeriod != null">validity_period = #{validityPeriod},</if>
+            <if test="renewTime != null">renew_time = #{renewTime},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="adminId != null">admin_id = #{adminId},</if>
+        </set>
+        WHERE card_no = #{cardNo}
+    </update>
+
+    <select id="existsById" resultType="int">
+        SELECT COUNT(*) FROM monthly_card WHERE card_id = #{cardId}
+    </select>
+
+    <select id="findMaxCardId" resultType="string">
+        SELECT MAX(card_id) FROM monthly_card
+    </select>
+
+</mapper>
