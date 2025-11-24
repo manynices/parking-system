@@ -11,7 +11,7 @@
     </insert>
 
     <select id="findById" resultType="com.experiment.parkingsystem.entity.Vehicle">
-        SELECT vehicle_id, license_plate, vehicle_type, owner_id, status FROM vehicle WHERE vehicle_id = #{vehicleId}
+        SELECT vehicle_id, license_plate, vehicle_type, owner_id, status FROM vehicle WHERE license_plate= #{licensePlate}
     </select>
 
     <select id="findByCriteria" resultType="com.experiment.parkingsystem.entity.Vehicle">
@@ -35,15 +35,15 @@
             <if test="ownerId != null">owner_id = #{ownerId},</if>
             <if test="status != null">status = #{status},</if>
         </set>
-        WHERE vehicle_id = #{vehicleId}
+        WHERE license_plate = #{licensePlate}
     </update>
 
     <delete id="deleteById">
-        DELETE FROM vehicle WHERE vehicle_id = #{vehicleId}
+        DELETE FROM vehicle WHERE license_plate= #{licensePlate}
     </delete>
 
     <select id="existsById" resultType="int">
-        SELECT COUNT(*) FROM vehicle WHERE vehicle_id = #{vehicleId}
+        SELECT COUNT(*) FROM vehicle WHERE license_plate= #{licensePlate}
     </select>
 
     <select id="findMaxVehicleId" resultType="string">
