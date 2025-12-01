@@ -53,40 +53,46 @@ public class VehicleController {
     }
 
     /**
-     * 根据ID查询单个车辆
-     * @param vehicleId 车辆ID
+     * 根据车牌号查询单个车辆
+     * @param licensePlate 车辆车牌号
      * @return 单个车辆信息
      */
-    @GetMapping("/{vehicleId}")
-    public ResponseEntity<ApiResponse<VehicleResponse>> getVehicleById(@PathVariable String vehicleId) {
-        VehicleResponse vehicle = vehicleService.getVehicleById(vehicleId);
+    @GetMapping("/{licensePlate}")
+    public ResponseEntity<ApiResponse<VehicleResponse>> getVehicleById(@PathVariable String licensePlate) {
+        VehicleResponse vehicle = vehicleService.getVehicleById(licensePlate);
         // 返回 200 OK 状态码
         return ResponseEntity.ok(ApiResponse.success(vehicle));
     }
 
+//    @GetMapping("/detail")
+//    public ResponseEntity<ApiResponse<VehicleResponse>> getVehicleById(@RequestParam String licensePlate) {
+//        VehicleResponse vehicle = vehicleService.getVehicleById(licensePlate);
+//        // 返回 200 OK 状态码
+//        return ResponseEntity.ok(ApiResponse.success(vehicle));
+//    }
     /**
      * 更新车辆信息
-     * @param vehicleId 要更新的车辆ID
+     * @param licensePlate 要更新的车车牌号
      * @param request 车辆更新请求体 (字段可选)
      * @return 更新后的车辆信息
      */
-    @PutMapping("/{vehicleId}")
+    @PutMapping("/{licensePlate}")
     public ResponseEntity<ApiResponse<VehicleResponse>> updateVehicle(
-            @PathVariable String vehicleId,
+            @PathVariable String licensePlate,
             @RequestBody VehicleUpdateRequest request) {
-        VehicleResponse updatedVehicle = vehicleService.updateVehicle(vehicleId, request);
+        VehicleResponse updatedVehicle = vehicleService.updateVehicle(licensePlate, request);
         // 返回 200 OK 状态码
         return ResponseEntity.ok(ApiResponse.success(updatedVehicle));
     }
 
     /**
      * 删除车辆
-     * @param vehicleId 要删除的车辆ID
+     * @param licensePlate 要删除的车辆车牌号
      * @return 操作成功消息
      */
-    @DeleteMapping("/{vehicleId}")
-    public ResponseEntity<ApiResponse<Void>> deleteVehicle(@PathVariable String vehicleId) {
-        vehicleService.deleteVehicle(vehicleId);
+    @DeleteMapping("/{licensePlate}")
+    public ResponseEntity<ApiResponse<Void>> deleteVehicle(@PathVariable String licensePlate) {
+        vehicleService.deleteVehicle(licensePlate);
         // 返回 200 OK 状态码，并携带成功消息
         return ResponseEntity.ok(ApiResponse.success("删除成功"));
     }
