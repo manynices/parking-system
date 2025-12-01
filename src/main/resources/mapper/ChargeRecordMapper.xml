@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.experiment.parkingsystem.mapper.ChargeRecordMapper">
+
+    <insert id="insert" parameterType="com.experiment.parkingsystem.entity.ChargeRecord">
+        INSERT INTO charge_record (record_id, vehicle_id, enter_time, exit_time, amount, payment_method, admin_id)
+        VALUES (#{recordId}, #{vehicleId}, #{enterTime}, #{exitTime}, #{amount}, #{paymentMethod}, #{adminId})
+    </insert>
+
+    <!--
+      该查询将 charge_record 表与 vehicle 表进行连接，
+      以便能够根据车牌号进行过滤，并在响应中直接返回车牌号。
+    -->
+    <select id="findByCriteria" resultType="com.experiment.parkingsystem.dto.ChargeRecordResponse">
+        SELECT
+        cr.record_id,
+        cr.vehicle_id,
+        v.license_plate,
+        cr.enter_time,
+        cr.exit_time,
+        cr.amount,
+        cr.payment_method,
+        cr.admin_id
+        FROM
+        charge_record cr
+        LEFT JOIN
+        vehicle v ON cr.vehicle_id = v.vehicle_id
+        <where>
+            <if test="licensePlate != null and licensePlate != ''">
+                AND v.license_plate LIKE CONCAT('%', #{licensePlate}, '%')
+            </if>
+            <if test="vehicleId != null and vehicleId != ''">
+                AND cr.vehicle_id = #{vehicleId}
+            </if>
+            <if test="adminId != null and adminId != ''">
+                AND cr.admin_id = #{adminId}
+            </if>
+            <if test="startTime != null">
+                AND cr.exit_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND cr.exit_time &lt;= #{endTime}
+            </if>
+        </where>
+        ORDER BY cr.exit_time DESC
+    </select>
+
+    <select id="findMaxRecordId" resultType="string">
+        SELECT MAX(record_id) FROM charge_record
+    </select>
+
+</mapper>
