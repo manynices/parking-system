@@ -11,7 +11,7 @@
     </insert>
 
     <select id="findById" resultType="com.experiment.parkingsystem.entity.MonthlyCard">
-        SELECT * FROM monthly_card WHERE card_no = #{cardNo}
+        SELECT * FROM monthly_card WHERE card_id = #{cardId}
     </select>
 
     <select id="findByCriteria" resultType="com.experiment.parkingsystem.entity.MonthlyCard">
@@ -35,7 +35,7 @@
             <if test="status != null">status = #{status},</if>
             <if test="adminId != null">admin_id = #{adminId},</if>
         </set>
-        WHERE card_no = #{cardNo}
+        WHERE card_id = #{cardId}
     </update>
 
     <select id="existsById" resultType="int">

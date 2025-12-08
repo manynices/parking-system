@@ -32,30 +32,30 @@ public class MonthlyCardController {
 
     /**
      * 3.2 月卡续费
-     * @param cardNo 要续费的月卡卡号
+     * @param cardId 要续费的月卡ID
      * @param request 续费请求体
      * @return 更新后的月卡信息
      */
-    @PutMapping("/{cardNo}/renew")
+    @PutMapping("/{cardId}/renew")
     public ResponseEntity<ApiResponse<MonthlyCardResponse>> renewMonthlyCard(
-            @PathVariable String cardNo,
+            @PathVariable String cardId,
             @RequestBody MonthlyCardRenewRequest request) {
-        MonthlyCardResponse updatedCard = monthlyCardService.renewMonthlyCard(cardNo, request);
+        MonthlyCardResponse updatedCard = monthlyCardService.renewMonthlyCard(cardId, request);
         // 返回 200 OK 状态码
         return ResponseEntity.ok(ApiResponse.success(updatedCard));
     }
 
     /**
      * 3.3 月卡挂失 / 解挂
-     * @param cardNo 要更新状态的月卡号
+     * @param cardId 要更新状态的月卡ID
      * @param request 状态更新请求体
      * @return 更新状态后的月卡信息
      */
-    @PutMapping("/{cardNo}/status")
+    @PutMapping("/{cardId}/status")
     public ResponseEntity<ApiResponse<MonthlyCardResponse>> updateMonthlyCardStatus(
-            @PathVariable String cardNo,
+            @PathVariable String cardId,
             @RequestBody MonthlyCardStatusRequest request) {
-        MonthlyCardResponse updatedCard = monthlyCardService.updateMonthlyCardStatus(cardNo, request);
+        MonthlyCardResponse updatedCard = monthlyCardService.updateMonthlyCardStatus(cardId, request);
         // 返回 200 OK 状态码
         return ResponseEntity.ok(ApiResponse.success(updatedCard));
     }

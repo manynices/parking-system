@@ -10,7 +10,7 @@ public interface MonthlyCardMapper {
 
     int insert(MonthlyCard monthlyCard);
 
-    MonthlyCard findById(@Param("cardNo") String cardNo);
+    MonthlyCard findById(@Param("cardId") String cardId);
 
     // 查询列表，根据 vehicleId 和 status 进行过滤
     List<MonthlyCard> findByCriteria(@Param("vehicleId") String vehicleId, @Param("status") String status);

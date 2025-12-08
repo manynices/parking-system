@@ -81,9 +81,6 @@ public class OwnerServiceImpl implements OwnerService {
         ownerMapper.deleteById(ownerId);
     }
 
-    // ===================================================================
-    // ===                 这是最终的、健壮的逻辑 (V5)                 ===
-    // ===================================================================
     private synchronized String generateNewOwnerId() {
         String maxId = ownerMapper.findMaxOwnerId();
 
