@@ -38,6 +38,7 @@ public class VehicleController {
      * @param size 每页数量 (默认 10)
      * @param ownerId 所属业主ID (可选)
      * @param status 车辆状态 (可选)
+     * @param licensePlate 车牌号 (【新增】可选，用于模糊搜索)
      * @return 分页的车辆列表
      */
     @GetMapping
@@ -45,9 +46,12 @@ public class VehicleController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String ownerId,
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String licensePlate) { // <-- 【新增】参数
 
-        PaginatedResponse<VehicleResponse> vehicles = vehicleService.getVehicles(page, size, ownerId, status);
+        // 【修改】将新参数传递给 Service 层
+        PaginatedResponse<VehicleResponse> vehicles = vehicleService.getVehicles(page, size, ownerId, status, licensePlate);
+
         // 返回 200 OK 状态码
         return ResponseEntity.ok(ApiResponse.success(vehicles));
     }

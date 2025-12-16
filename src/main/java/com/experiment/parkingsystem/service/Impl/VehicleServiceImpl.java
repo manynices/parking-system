@@ -36,9 +36,12 @@ public class VehicleServiceImpl implements VehicleService {
     }
 
     @Override
-    public PaginatedResponse<VehicleResponse> getVehicles(int page, int size, String ownerId, String status) {
+    public PaginatedResponse<VehicleResponse> getVehicles(int page, int size, String ownerId, String status, String licensePlate) { // <-- 【修改】接收新参数
         PageHelper.startPage(page, size);
-        List<Vehicle> vehicles = vehicleMapper.findByCriteria(ownerId, status); // 调用带过滤条件的查询
+
+        // 【修改】调用 Mapper 时传递新参数
+        List<Vehicle> vehicles = vehicleMapper.findByCriteria(ownerId, status, licensePlate);
+
         PageInfo<Vehicle> pageInfo = new PageInfo<>(vehicles);
 
         List<VehicleResponse> dtoList = pageInfo.getList().stream()

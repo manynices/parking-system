@@ -13,7 +13,7 @@ public interface VehicleMapper {
     Vehicle findById(@Param("vehicleId") String vehicleId);
 
     // 查询列表，根据 ownerId 和 status 进行过滤
-    List<Vehicle> findByCriteria(@Param("ownerId") String ownerId, @Param("status") String status);
+    List<Vehicle> findByCriteria(@Param("ownerId") String ownerId, @Param("status") String status, @Param("licensePlate") String licensePlate);
 
     int update(Vehicle vehicle);
 

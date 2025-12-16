@@ -23,6 +23,10 @@
             <if test="status != null and status != ''">
                 AND status = #{status}
             </if>
+            <!-- 【新增】对车牌号进行模糊查询 -->
+            <if test="licensePlate != null and licensePlate != ''">
+                AND license_plate LIKE CONCAT('%', #{licensePlate}, '%')
+            </if>
         </where>
         ORDER BY vehicle_id ASC
     </select>
@@ -49,5 +53,4 @@
     <select id="findMaxVehicleId" resultType="string">
         SELECT MAX(vehicle_id) FROM vehicle
     </select>
-
 </mapper>
