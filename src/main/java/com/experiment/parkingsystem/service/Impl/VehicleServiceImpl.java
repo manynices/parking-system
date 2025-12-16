@@ -1,19 +1,23 @@
-package com.experiment.parkingsystem.service.Impl;
+package com.experiment.parkingsystem.service.impl;
 
 import com.experiment.parkingsystem.common.PaginatedResponse;
-import com.experiment.parkingsystem.dto.VehicleCreateRequest;
-import com.experiment.parkingsystem.dto.VehicleResponse;
-import com.experiment.parkingsystem.dto.VehicleUpdateRequest;
+import com.experiment.parkingsystem.common.UserContext;
+import com.experiment.parkingsystem.dto.vehicle.*;
+import com.experiment.parkingsystem.entity.User;
 import com.experiment.parkingsystem.entity.Vehicle;
-import com.experiment.parkingsystem.exception.ResourceNotFoundException;
-import com.experiment.parkingsystem.mapper.VehicleMapper; // 确保导入正确的Mapper
+import com.experiment.parkingsystem.entity.VehicleBindApplication;
+import com.experiment.parkingsystem.mapper.UserMapper;
+import com.experiment.parkingsystem.mapper.VehicleBindApplicationMapper;
+import com.experiment.parkingsystem.mapper.VehicleMapper;
 import com.experiment.parkingsystem.service.VehicleService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,97 +25,171 @@ import java.util.stream.Collectors;
 public class VehicleServiceImpl implements VehicleService {
 
     private final VehicleMapper vehicleMapper;
+    private final VehicleBindApplicationMapper bindApplicationMapper;
+    private final UserMapper userMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public VehicleServiceImpl(VehicleMapper vehicleMapper) {
+    public VehicleServiceImpl(VehicleMapper vehicleMapper, VehicleBindApplicationMapper bindApplicationMapper, UserMapper userMapper) {
         this.vehicleMapper = vehicleMapper;
+        this.bindApplicationMapper = bindApplicationMapper;
+        this.userMapper = userMapper;
+    }
+
+    // --- 辅助方法：ID 解析与格式化 ---
+    private Long parseId(String idStr, String prefix) {
+        if (idStr == null || !idStr.startsWith(prefix)) return null;
+        try {
+            return Long.parseLong(idStr.substring(prefix.length()));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private String formatId(Long id, String prefix) {
+        if (id == null) return null;
+        return prefix + String.format("%03d", id);
+    }
+
+    // --- 辅助方法：DTO 转换 ---
+    private VehicleResponse convertToResponse(Vehicle v) {
+        VehicleResponse response = new VehicleResponse();
+        BeanUtils.copyProperties(v, response);
+        response.setVehicleId(formatId(v.getVehicleId(), "V"));
+        response.setOwnerId(formatId(v.getOwnerId(), "O"));
+        response.setUserId(formatId(v.getUserId(), "U"));
+
+        // 补全姓名
+        if (v.getUserName() == null && v.getUserId() != null) {
+            User u = userMapper.selectById(v.getUserId());
+            if (u != null) response.setUserName(u.getName());
+        }
+        if (v.getOwnerName() == null && v.getOwnerId() != null) {
+            User u = userMapper.selectById(v.getOwnerId());
+            if (u != null) response.setOwnerName(u.getName());
+        }
+
+        // 模拟车位和月卡数据
+        response.setIsPrivateSpace(false);
+        response.setHasMonthlyCard(false);
+
+        return response;
     }
 
     @Override
-    public VehicleResponse createVehicle(VehicleCreateRequest request) {
+    @Transactional
+    public VehicleResponse addVehicle(VehicleRequest request) {
         Vehicle vehicle = new Vehicle();
         BeanUtils.copyProperties(request, vehicle);
-        vehicle.setVehicleId(generateNewVehicleId()); // 生成新的 Vehicle ID
+
+        // 解析 String ID 为 Long
+        // 假设前端传 ownerId="O001", userId="U001"
+        vehicle.setOwnerId(parseId(request.getOwnerId(), "O"));
+        vehicle.setUserId(parseId(request.getUserId(), "U"));
+
+        vehicle.setCreateTime(LocalDateTime.now());
+
         vehicleMapper.insert(vehicle);
-        return VehicleResponse.fromEntity(vehicle);
+
+        return convertToResponse(vehicle);
     }
 
     @Override
-    public PaginatedResponse<VehicleResponse> getVehicles(int page, int size, String ownerId, String status, String licensePlate) { // <-- 【修改】接收新参数
+    @Transactional
+    public VehicleBindResponse applyBind(VehicleBindRequest request) {
+        Long userId = UserContext.getUserId();
+
+        VehicleBindApplication app = new VehicleBindApplication();
+        BeanUtils.copyProperties(request, app);
+        app.setUserId(userId);
+        app.setStatus("待审核");
+        app.setCreateTime(LocalDateTime.now());
+
+        try {
+            app.setProofImages(objectMapper.writeValueAsString(request.getProofImages()));
+        } catch (Exception e) {
+            app.setProofImages("[]");
+        }
+
+        bindApplicationMapper.insert(app);
+
+        // 构造正确的响应对象 VehicleBindResponse
+        VehicleBindResponse response = new VehicleBindResponse();
+        BeanUtils.copyProperties(app, response);
+        response.setApplicationId("UVA" + String.format("%03d", app.getApplicationId()));
+
+        return response;
+    }
+
+    @Override
+    public PaginatedResponse<VehicleResponse> listVehicles(int page, int size, String ownerIdStr, String userIdStr, String status, String vehicleClass, String licensePlate) {
         PageHelper.startPage(page, size);
 
-        // 【修改】调用 Mapper 时传递新参数
-        List<Vehicle> vehicles = vehicleMapper.findByCriteria(ownerId, status, licensePlate);
+        // 解析查询参数中的 ID
+        Long ownerId = parseId(ownerIdStr, "O");
+        if (ownerId == null) ownerId = parseId(ownerIdStr, "U"); // 兼容 Uxxx
+        Long userId = parseId(userIdStr, "U");
 
-        PageInfo<Vehicle> pageInfo = new PageInfo<>(vehicles);
+        List<Vehicle> list = vehicleMapper.selectList(ownerId, userId, status, vehicleClass, licensePlate);
+        PageInfo<Vehicle> pageInfo = new PageInfo<>(list);
 
-        List<VehicleResponse> dtoList = pageInfo.getList().stream()
-                .map(VehicleResponse::fromEntity)
+        List<VehicleResponse> dtoList = list.stream()
+                .map(this::convertToResponse)
                 .collect(Collectors.toList());
 
-        return new PaginatedResponse<>(pageInfo.getTotal(), dtoList);
+        // 适配您的 (total, list) 构造函数
+        return new PaginatedResponse<VehicleResponse>(pageInfo.getTotal(), dtoList);
     }
 
     @Override
-    public VehicleResponse getVehicleById(String vehicleId) {
-        Vehicle vehicle = vehicleMapper.findById(vehicleId);
-        if (vehicle == null) {
-            throw new ResourceNotFoundException("Vehicle not found with id: " + vehicleId);
-        }
-        return VehicleResponse.fromEntity(vehicle);
+    public VehicleResponse getVehicleById(String vehicleIdStr) {
+        Long id = parseId(vehicleIdStr, "V");
+        Vehicle v = vehicleMapper.selectById(id);
+        if (v == null) throw new RuntimeException("车辆不存在");
+        return convertToResponse(v);
     }
 
     @Override
-    public VehicleResponse updateVehicle(String vehicleId, VehicleUpdateRequest request) {
-        Vehicle existingVehicle = vehicleMapper.findById(vehicleId);
-        if (existingVehicle == null) {
-            throw new ResourceNotFoundException("Vehicle not found with id: " + vehicleId);
-        }
+    @Transactional
+    public VehicleResponse updateVehicle(String vehicleIdStr, VehicleRequest request) {
+        Long id = parseId(vehicleIdStr, "V");
+        Vehicle v = vehicleMapper.selectById(id);
+        if (v == null) throw new RuntimeException("车辆不存在");
 
-        // --- 标准的部分更新逻辑 ---
-        // 只更新请求体中非空（或有文本内容的）字段
-        if (StringUtils.hasText(request.getLicensePlate())) {
-            existingVehicle.setLicensePlate(request.getLicensePlate());
-        }
-        if (StringUtils.hasText(request.getVehicleType())) {
-            existingVehicle.setVehicleType(request.getVehicleType());
-        }
-        if (StringUtils.hasText(request.getOwnerId())) {
-            existingVehicle.setOwnerId(request.getOwnerId());
-        }
-        if (StringUtils.hasText(request.getStatus())) {
-            existingVehicle.setStatus(request.getStatus());
-        }
-        // --- 结束部分更新逻辑 ---
+        BeanUtils.copyProperties(request, v);
+        // ID 不允许修改
+        v.setVehicleId(id);
+        // 重新设置关联ID
+        if (request.getOwnerId() != null) v.setOwnerId(parseId(request.getOwnerId(), "O"));
+        if (request.getUserId() != null) v.setUserId(parseId(request.getUserId(), "U"));
 
-        vehicleMapper.update(existingVehicle); // 更新整个实体
-
-        // 返回更新后的完整信息 (重新从数据库查询或直接返回修改后的对象)
-        return VehicleResponse.fromEntity(existingVehicle);
+        vehicleMapper.updateById(v);
+        return convertToResponse(v);
     }
 
     @Override
-    public void deleteVehicle(String vehicleId) {
-        if (vehicleMapper.existsById(vehicleId) == 0) {
-            throw new ResourceNotFoundException("Vehicle not found with id: ".concat(vehicleId));
-        }
-        vehicleMapper.deleteById(vehicleId);
+    public void deleteVehicle(String vehicleIdStr) {
+        Long id = parseId(vehicleIdStr, "V");
+        vehicleMapper.deleteById(id);
     }
 
-    // 生成新的车辆ID，例如从 V001, V002...
-    private synchronized String generateNewVehicleId() {
-        String maxId = vehicleMapper.findMaxVehicleId();
-        if (!StringUtils.hasText(maxId)) {
-            return "V001";
-        }
+    @Override
+    public VehicleResponse getVehicleByPlate(String licensePlate) {
+        Vehicle v = vehicleMapper.selectByLicensePlate(licensePlate);
+        if (v == null) throw new RuntimeException("车辆不存在");
+        return convertToResponse(v);
+    }
 
-        String numberString;
-        if (maxId.toUpperCase().startsWith("V")) {
-            numberString = maxId.substring(1);
-        } else {
-            numberString = maxId;
-        }
-
-        int number = Integer.parseInt(numberString);
-        return "V" + String.format("%03d", number + 1);
+    @Override
+    public List<VehicleResponse> getMyVehicles() {
+        Long userId = UserContext.getUserId();
+        List<Vehicle> list = vehicleMapper.selectByUserId(userId);
+        return list.stream().map(v -> {
+            VehicleResponse res = convertToResponse(v);
+            // 模拟数据
+            res.setIsPrivateSpace(true);
+            res.setPrivateSpaceNo("B1-001");
+            res.setHasMonthlyCard(true);
+            return res;
+        }).collect(Collectors.toList());
     }
 }

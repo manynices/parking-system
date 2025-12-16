@@ -2,16 +2,16 @@ package com.experiment.parkingsystem.controller;
 
 import com.experiment.parkingsystem.common.ApiResponse;
 import com.experiment.parkingsystem.common.PaginatedResponse;
-import com.experiment.parkingsystem.dto.VehicleCreateRequest;
-import com.experiment.parkingsystem.dto.VehicleResponse;
-import com.experiment.parkingsystem.dto.VehicleUpdateRequest;
+import com.experiment.parkingsystem.dto.vehicle.*;
 import com.experiment.parkingsystem.service.VehicleService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/vehicles") // API 请求路径前缀
+@RequestMapping("/vehicles")
 public class VehicleController {
 
     private final VehicleService vehicleService;
@@ -20,78 +20,65 @@ public class VehicleController {
         this.vehicleService = vehicleService;
     }
 
-    /**
-     * 新增车辆
-     * @param request 车辆创建请求体
-     * @return 响应新创建的车辆信息
-     */
+    // 2.1 管理员新增车辆
     @PostMapping
-    public ResponseEntity<ApiResponse<VehicleResponse>> createVehicle(@RequestBody VehicleCreateRequest request) {
-        VehicleResponse createdVehicle = vehicleService.createVehicle(request);
-        // 返回 201 Created 状态码
-        return new ResponseEntity<>(ApiResponse.success(createdVehicle), HttpStatus.CREATED);
+    public ResponseEntity<ApiResponse<VehicleResponse>> addVehicle(@RequestBody VehicleRequest request) {
+        return new ResponseEntity<>(ApiResponse.success(vehicleService.addVehicle(request)), HttpStatus.CREATED);
     }
 
-    /**
-     * 查询车辆列表
-     * @param page 页码 (默认 1)
-     * @param size 每页数量 (默认 10)
-     * @param ownerId 所属业主ID (可选)
-     * @param status 车辆状态 (可选)
-     * @param licensePlate 车牌号 (【新增】可选，用于模糊搜索)
-     * @return 分页的车辆列表
-     */
+    // 2.2 用户申请绑定车辆
+    @PostMapping("/bind-application")
+    public ResponseEntity<ApiResponse<VehicleBindResponse>> applyBind(@RequestBody VehicleBindRequest request) {
+        return new ResponseEntity<>(ApiResponse.success(vehicleService.applyBind(request)), HttpStatus.CREATED);
+    }
+
+    // 2.3 查询车辆列表
     @GetMapping
-    public ResponseEntity<ApiResponse<PaginatedResponse<VehicleResponse>>> getVehicles(
+    public ResponseEntity<ApiResponse<PaginatedResponse<VehicleResponse>>> listVehicles(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String ownerId,
+            @RequestParam(required = false) String userId,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String licensePlate) { // <-- 【新增】参数
+            @RequestParam(required = false) String vehicleClass,
+            @RequestParam(required = false) String licensePlate) {
 
-        // 【修改】将新参数传递给 Service 层
-        PaginatedResponse<VehicleResponse> vehicles = vehicleService.getVehicles(page, size, ownerId, status, licensePlate);
-
-        // 返回 200 OK 状态码
-        return ResponseEntity.ok(ApiResponse.success(vehicles));
+        return ResponseEntity.ok(ApiResponse.success(
+                vehicleService.listVehicles(page, size, ownerId, userId, status, vehicleClass, licensePlate)
+        ));
     }
 
-    /**
-     * 根据ID查询单个车辆
-     * @param vehicleId 车辆ID
-     * @return 单个车辆信息
-     */
+    // 2.4 查询单个车辆
     @GetMapping("/{vehicleId}")
-    public ResponseEntity<ApiResponse<VehicleResponse>> getVehicleById(@PathVariable String vehicleId) {
-        VehicleResponse vehicle = vehicleService.getVehicleById(vehicleId);
-        // 返回 200 OK 状态码
-        return ResponseEntity.ok(ApiResponse.success(vehicle));
+    public ResponseEntity<ApiResponse<VehicleResponse>> getVehicle(@PathVariable String vehicleId) {
+        return ResponseEntity.ok(ApiResponse.success(vehicleService.getVehicleById(vehicleId)));
     }
 
-    /**
-     * 更新车辆信息
-     * @param vehicleId 要更新的车辆ID
-     * @param request 车辆更新请求体 (字段可选)
-     * @return 更新后的车辆信息
-     */
+    // 2.5 更新车辆信息
     @PutMapping("/{vehicleId}")
     public ResponseEntity<ApiResponse<VehicleResponse>> updateVehicle(
             @PathVariable String vehicleId,
-            @RequestBody VehicleUpdateRequest request) {
-        VehicleResponse updatedVehicle = vehicleService.updateVehicle(vehicleId, request);
-        // 返回 200 OK 状态码
-        return ResponseEntity.ok(ApiResponse.success(updatedVehicle));
+            @RequestBody VehicleRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(vehicleService.updateVehicle(vehicleId, request)));
     }
 
-    /**
-     * 删除车辆
-     * @param vehicleId 要删除的车辆ID
-     * @return 操作成功消息
-     */
+    // 2.6 删除车辆
     @DeleteMapping("/{vehicleId}")
     public ResponseEntity<ApiResponse<Void>> deleteVehicle(@PathVariable String vehicleId) {
         vehicleService.deleteVehicle(vehicleId);
-        // 返回 200 OK 状态码，并携带成功消息
+        // 【修改点】之前是 successMessage，改为 success 以匹配你的 ApiResponse 定义
         return ResponseEntity.ok(ApiResponse.success("删除成功"));
+    }
+
+    // 2.7 根据车牌号查询车辆
+    @GetMapping("/by-plate/{licensePlate}")
+    public ResponseEntity<ApiResponse<VehicleResponse>> getVehicleByPlate(@PathVariable String licensePlate) {
+        return ResponseEntity.ok(ApiResponse.success(vehicleService.getVehicleByPlate(licensePlate)));
+    }
+
+    // 2.8 用户查询自己的车辆
+    @GetMapping("/my-vehicles")
+    public ResponseEntity<ApiResponse<List<VehicleResponse>>> getMyVehicles() {
+        return ResponseEntity.ok(ApiResponse.success(vehicleService.getMyVehicles()));
     }
 }

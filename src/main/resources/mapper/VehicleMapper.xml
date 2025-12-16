@@ -1,43 +1,25 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.experiment.parkingsystem.mapper.VehicleMapper">
 
-    <insert id="insert" parameterType="com.experiment.parkingsystem.entity.Vehicle">
-        INSERT INTO vehicle (vehicle_id, license_plate, vehicle_type, owner_id, status)
-        VALUES (#{vehicleId}, #{licensePlate}, #{vehicleType}, #{ownerId}, #{status})
+    <insert id="insert" useGeneratedKeys="true" keyProperty="vehicleId">
+        INSERT INTO vehicle
+        (license_plate, vehicle_type, owner_id, user_id, status, vehicle_class, vehicle_brand, vehicle_color, engine_no, frame_no, insurance_expiry, annual_inspection_expiry, create_time)
+        VALUES
+            (#{licensePlate}, #{vehicleType}, #{ownerId}, #{userId}, #{status}, #{vehicleClass}, #{vehicleBrand}, #{vehicleColor}, #{engineNo}, #{frameNo}, #{insuranceExpiry}, #{annualInspectionExpiry}, #{createTime})
     </insert>
 
-    <select id="findById" resultType="com.experiment.parkingsystem.entity.Vehicle">
-        SELECT vehicle_id, license_plate, vehicle_type, owner_id, status FROM vehicle WHERE vehicle_id = #{vehicleId}
-    </select>
-
-    <select id="findByCriteria" resultType="com.experiment.parkingsystem.entity.Vehicle">
-        SELECT vehicle_id, license_plate, vehicle_type, owner_id, status FROM vehicle
-        <where>
-            <if test="ownerId != null and ownerId != ''">
-                AND owner_id = #{ownerId}
-            </if>
-            <if test="status != null and status != ''">
-                AND status = #{status}
-            </if>
-            <!-- 【新增】对车牌号进行模糊查询 -->
-            <if test="licensePlate != null and licensePlate != ''">
-                AND license_plate LIKE CONCAT('%', #{licensePlate}, '%')
-            </if>
-        </where>
-        ORDER BY vehicle_id ASC
-    </select>
-
-    <update id="update" parameterType="com.experiment.parkingsystem.entity.Vehicle">
+    <update id="updateById">
         UPDATE vehicle
         <set>
             <if test="licensePlate != null">license_plate = #{licensePlate},</if>
             <if test="vehicleType != null">vehicle_type = #{vehicleType},</if>
-            <if test="ownerId != null">owner_id = #{ownerId},</if>
             <if test="status != null">status = #{status},</if>
+            <if test="vehicleClass != null">vehicle_class = #{vehicleClass},</if>
+            <if test="vehicleBrand != null">vehicle_brand = #{vehicleBrand},</if>
+            <if test="vehicleColor != null">vehicle_color = #{vehicleColor},</if>
+            <if test="insuranceExpiry != null">insurance_expiry = #{insuranceExpiry},</if>
+            <if test="annualInspectionExpiry != null">annual_inspection_expiry = #{annualInspectionExpiry},</if>
         </set>
         WHERE vehicle_id = #{vehicleId}
     </update>
@@ -46,11 +28,32 @@
         DELETE FROM vehicle WHERE vehicle_id = #{vehicleId}
     </delete>
 
-    <select id="existsById" resultType="int">
-        SELECT COUNT(*) FROM vehicle WHERE vehicle_id = #{vehicleId}
+    <select id="selectById" resultType="com.experiment.parkingsystem.entity.Vehicle">
+        SELECT * FROM vehicle WHERE vehicle_id = #{vehicleId}
     </select>
 
-    <select id="findMaxVehicleId" resultType="string">
-        SELECT MAX(vehicle_id) FROM vehicle
+    <select id="selectByLicensePlate" resultType="com.experiment.parkingsystem.entity.Vehicle">
+        SELECT * FROM vehicle WHERE license_plate = #{licensePlate}
     </select>
+
+    <select id="selectByUserId" resultType="com.experiment.parkingsystem.entity.Vehicle">
+        SELECT * FROM vehicle WHERE user_id = #{userId}
+    </select>
+
+    <!-- 关联查询，获取 ownerName 和 userName -->
+    <select id="selectList" resultType="com.experiment.parkingsystem.entity.Vehicle">
+        SELECT v.*, u1.name as owner_name, u2.name as user_name
+        FROM vehicle v
+        LEFT JOIN sys_user u1 ON v.owner_id = u1.user_id
+        LEFT JOIN sys_user u2 ON v.user_id = u2.user_id
+        <where>
+            <if test="ownerId != null">AND v.owner_id = #{ownerId}</if>
+            <if test="userId != null">AND v.user_id = #{userId}</if>
+            <if test="status != null and status != ''">AND v.status = #{status}</if>
+            <if test="vehicleClass != null and vehicleClass != ''">AND v.vehicle_class = #{vehicleClass}</if>
+            <if test="licensePlate != null and licensePlate != ''">AND v.license_plate LIKE CONCAT('%', #{licensePlate}, '%')</if>
+        </where>
+        ORDER BY v.create_time DESC
+    </select>
+
 </mapper>

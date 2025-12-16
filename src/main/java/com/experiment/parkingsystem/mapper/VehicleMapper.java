@@ -7,20 +7,20 @@ import java.util.List;
 
 @Mapper
 public interface VehicleMapper {
-
     int insert(Vehicle vehicle);
+    int updateById(Vehicle vehicle);
+    int deleteById(@Param("vehicleId") Long vehicleId);
 
-    Vehicle findById(@Param("vehicleId") String vehicleId);
+    Vehicle selectById(@Param("vehicleId") Long vehicleId);
+    Vehicle selectByLicensePlate(@Param("licensePlate") String licensePlate);
 
-    // 查询列表，根据 ownerId 和 status 进行过滤
-    List<Vehicle> findByCriteria(@Param("ownerId") String ownerId, @Param("status") String status, @Param("licensePlate") String licensePlate);
+    // 列表查询，支持关联用户表获取姓名
+    List<Vehicle> selectList(@Param("ownerId") Long ownerId,
+                             @Param("userId") Long userId,
+                             @Param("status") String status,
+                             @Param("vehicleClass") String vehicleClass,
+                             @Param("licensePlate") String licensePlate);
 
-    int update(Vehicle vehicle);
-
-    int deleteById(@Param("vehicleId") String vehicleId);
-
-    int existsById(@Param("vehicleId") String vehicleId);
-
-    // 用于生成新的 vehicleId
-    String findMaxVehicleId();
+    // 简单查询，不关联
+    List<Vehicle> selectByUserId(@Param("userId") Long userId);
 }

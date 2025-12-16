@@ -1,14 +1,25 @@
 package com.experiment.parkingsystem.service;
 
 import com.experiment.parkingsystem.common.PaginatedResponse;
-import com.experiment.parkingsystem.dto.VehicleCreateRequest;
-import com.experiment.parkingsystem.dto.VehicleResponse;
-import com.experiment.parkingsystem.dto.VehicleUpdateRequest;
+import com.experiment.parkingsystem.dto.vehicle.*;
+
+import java.util.List;
 
 public interface VehicleService {
-    VehicleResponse createVehicle(VehicleCreateRequest request);
-    com.experiment.parkingsystem.common.PaginatedResponse<VehicleResponse> getVehicles(int page, int size, String ownerId, String status, String licensePlate);
-    VehicleResponse getVehicleById(String vehicleId);
-    VehicleResponse updateVehicle(String vehicleId, VehicleUpdateRequest request);
-    void deleteVehicle(String vehicleId);
+    VehicleResponse addVehicle(VehicleRequest request);
+
+    // 【修改点】这里必须是 VehicleBindResponse
+    VehicleBindResponse applyBind(VehicleBindRequest request);
+
+    PaginatedResponse<VehicleResponse> listVehicles(int page, int size, String ownerIdStr, String userIdStr, String status, String vehicleClass, String licensePlate);
+
+    VehicleResponse getVehicleById(String vehicleIdStr);
+
+    VehicleResponse updateVehicle(String vehicleIdStr, VehicleRequest request);
+
+    void deleteVehicle(String vehicleIdStr);
+
+    VehicleResponse getVehicleByPlate(String licensePlate);
+
+    List<VehicleResponse> getMyVehicles();
 }
