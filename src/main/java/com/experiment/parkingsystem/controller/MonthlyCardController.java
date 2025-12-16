@@ -2,81 +2,69 @@ package com.experiment.parkingsystem.controller;
 
 import com.experiment.parkingsystem.common.ApiResponse;
 import com.experiment.parkingsystem.common.PaginatedResponse;
-import com.experiment.parkingsystem.dto.*;
+import com.experiment.parkingsystem.dto.monthlycard.*;
 import com.experiment.parkingsystem.service.MonthlyCardService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/monthly-cards") // API 请求路径前缀
+@RequestMapping("/monthly-cards")
 public class MonthlyCardController {
 
-    private final MonthlyCardService monthlyCardService;
+    private final MonthlyCardService cardService;
 
-    public MonthlyCardController(MonthlyCardService monthlyCardService) {
-        this.monthlyCardService = monthlyCardService;
+    public MonthlyCardController(MonthlyCardService cardService) {
+        this.cardService = cardService;
     }
 
-    /**
-     * 3.1 办理月卡
-     * @param request 办理月卡的请求体
-     * @return 新创建的月卡信息
-     */
+    // 3.1 办理月卡
     @PostMapping
-    public ResponseEntity<ApiResponse<MonthlyCardResponse>> createMonthlyCard(@RequestBody MonthlyCardCreateRequest request) {
-        MonthlyCardResponse createdCard = monthlyCardService.createMonthlyCard(request);
-        // 返回 201 Created 状态码
-        return new ResponseEntity<>(ApiResponse.success(createdCard), HttpStatus.CREATED);
+    public ResponseEntity<ApiResponse<MonthlyCardResponse>> createCard(@RequestBody MonthlyCardRequest request) {
+        return new ResponseEntity<>(ApiResponse.success(cardService.createCard(request)), HttpStatus.CREATED);
     }
 
-    /**
-     * 3.2 月卡续费
-     * @param cardId 要续费的月卡ID
-     * @param request 续费请求体
-     * @return 更新后的月卡信息
-     */
+    // 3.2 月卡续费
     @PutMapping("/{cardId}/renew")
-    public ResponseEntity<ApiResponse<MonthlyCardResponse>> renewMonthlyCard(
+    public ResponseEntity<ApiResponse<MonthlyCardResponse>> renewCard(
             @PathVariable String cardId,
             @RequestBody MonthlyCardRenewRequest request) {
-        MonthlyCardResponse updatedCard = monthlyCardService.renewMonthlyCard(cardId, request);
-        // 返回 200 OK 状态码
-        return ResponseEntity.ok(ApiResponse.success(updatedCard));
+        return ResponseEntity.ok(ApiResponse.success(cardService.renewCard(cardId, request)));
     }
 
-    /**
-     * 3.3 月卡挂失 / 解挂
-     * @param cardId 要更新状态的月卡ID
-     * @param request 状态更新请求体
-     * @return 更新状态后的月卡信息
-     */
+    // 3.3 月卡挂失/解挂
     @PutMapping("/{cardId}/status")
-    public ResponseEntity<ApiResponse<MonthlyCardResponse>> updateMonthlyCardStatus(
+    public ResponseEntity<ApiResponse<MonthlyCardResponse>> updateStatus(
             @PathVariable String cardId,
             @RequestBody MonthlyCardStatusRequest request) {
-        MonthlyCardResponse updatedCard = monthlyCardService.updateMonthlyCardStatus(cardId, request);
-        // 返回 200 OK 状态码
-        return ResponseEntity.ok(ApiResponse.success(updatedCard));
+        return ResponseEntity.ok(ApiResponse.success(cardService.updateStatus(cardId, request)));
     }
 
-    /**
-     * 3.4 查询月卡列表
-     * @param page 页码
-     * @param size 每页数量
-     * @param vehicleId 车辆ID (可选过滤条件)
-     * @param status 月卡状态 (可选过滤条件)
-     * @return 分页的月卡列表
-     */
+    // 3.4 查询月卡列表
     @GetMapping
-    public ResponseEntity<ApiResponse<PaginatedResponse<MonthlyCardResponse>>> getMonthlyCards(
+    public ResponseEntity<ApiResponse<PaginatedResponse<MonthlyCardResponse>>> listCards(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String vehicleId,
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String ownerId,
+            @RequestParam(required = false) String userId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                cardService.listCards(page, size, vehicleId, status, ownerId, userId)
+        ));
+    }
 
-        PaginatedResponse<MonthlyCardResponse> cards = monthlyCardService.getMonthlyCards(page, size, vehicleId, status);
-        // 返回 200 OK 状态码
-        return ResponseEntity.ok(ApiResponse.success(cards));
+    // 3.5 查询单个月卡
+    @GetMapping("/{cardId}")
+    public ResponseEntity<ApiResponse<MonthlyCardResponse>> getCard(@PathVariable String cardId) {
+        return ResponseEntity.ok(ApiResponse.success(cardService.getCardById(cardId)));
+    }
+
+    // 3.6 获取套餐信息
+    @GetMapping("/packages")
+    public ResponseEntity<ApiResponse<List<MonthlyCardPackageResponse>>> getPackages() {
+        return ResponseEntity.ok(ApiResponse.success(cardService.getPackages()));
     }
 }

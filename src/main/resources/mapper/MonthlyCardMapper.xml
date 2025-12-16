@@ -1,49 +1,46 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.experiment.parkingsystem.mapper.MonthlyCardMapper">
 
-    <insert id="insert" parameterType="com.experiment.parkingsystem.entity.MonthlyCard">
-        INSERT INTO monthly_card (card_id, card_no, vehicle_id, issue_time, validity_period, renew_time, status, admin_id)
-        VALUES (#{cardId}, #{cardNo}, #{vehicleId}, #{issueTime}, #{validityPeriod}, #{renewTime}, #{status}, #{adminId})
+    <insert id="insert" useGeneratedKeys="true" keyProperty="cardId">
+        INSERT INTO monthly_card
+        (card_no, vehicle_id, package_type, amount, payment_method, invoice_no, issue_time, validity_period, renew_time, status, create_time)
+        VALUES
+            (#{cardNo}, #{vehicleId}, #{packageType}, #{amount}, #{paymentMethod}, #{invoiceNo}, #{issueTime}, #{validityPeriod}, #{renewTime}, #{status}, #{createTime})
     </insert>
 
-    <select id="findById" resultType="com.experiment.parkingsystem.entity.MonthlyCard">
-        SELECT * FROM monthly_card WHERE card_id = #{cardId}
-    </select>
-
-    <select id="findByCriteria" resultType="com.experiment.parkingsystem.entity.MonthlyCard">
-        SELECT * FROM monthly_card
-        <where>
-            <if test="vehicleId != null and vehicleId != ''">
-                AND vehicle_id = #{vehicleId}
-            </if>
-            <if test="status != null and status != ''">
-                AND status = #{status}
-            </if>
-        </where>
-        ORDER BY issue_time DESC
-    </select>
-
-    <update id="update" parameterType="com.experiment.parkingsystem.entity.MonthlyCard">
+    <update id="updateById">
         UPDATE monthly_card
         <set>
             <if test="validityPeriod != null">validity_period = #{validityPeriod},</if>
             <if test="renewTime != null">renew_time = #{renewTime},</if>
             <if test="status != null">status = #{status},</if>
-            <if test="adminId != null">admin_id = #{adminId},</if>
+            <if test="packageType != null">package_type = #{packageType},</if>
+            <if test="amount != null">amount = #{amount},</if>
+            <if test="paymentMethod != null">payment_method = #{paymentMethod},</if>
         </set>
         WHERE card_id = #{cardId}
     </update>
 
-    <select id="existsById" resultType="int">
-        SELECT COUNT(*) FROM monthly_card WHERE card_id = #{cardId}
+    <select id="selectById" resultType="com.experiment.parkingsystem.entity.MonthlyCard">
+        SELECT * FROM monthly_card WHERE card_id = #{cardId}
     </select>
 
-    <select id="findMaxCardId" resultType="string">
-        SELECT MAX(card_id) FROM monthly_card
+    <!-- 关联查询：获取车牌号(v.license_plate) 和 车主姓名(u.name) -->
+    <select id="selectList" resultType="com.experiment.parkingsystem.entity.MonthlyCard">
+        SELECT mc.*, v.license_plate as vehicle_plate, u.name as owner_name
+        FROM monthly_card mc
+        LEFT JOIN vehicle v ON mc.vehicle_id = v.vehicle_id
+        LEFT JOIN sys_user u ON v.owner_id = u.user_id
+        <where>
+            <if test="vehicleId != null">AND mc.vehicle_id = #{vehicleId}</if>
+            <if test="status != null and status != ''">AND mc.status = #{status}</if>
+            <!-- 筛选特定业主的月卡 -->
+            <if test="ownerId != null">AND v.owner_id = #{ownerId}</if>
+            <!-- 筛选特定用户的月卡 -->
+            <if test="userId != null">AND v.user_id = #{userId}</if>
+        </where>
+        ORDER BY mc.create_time DESC
     </select>
 
 </mapper>

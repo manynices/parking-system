@@ -1,16 +1,25 @@
 package com.experiment.parkingsystem.entity;
 
 import lombok.Data;
-import java.util.Date;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 public class MonthlyCard {
-    private String cardId;
+    private Long cardId;
     private String cardNo;
-    private String vehicleId;
-    private Date issueTime;
-    private Date validityPeriod;
-    private Date renewTime;
+    private Long vehicleId;
+    private String packageType;
+    private BigDecimal amount;
+    private String paymentMethod;
+    private String invoiceNo;
+    private LocalDateTime issueTime;
+    private LocalDateTime validityPeriod;
+    private LocalDateTime renewTime;
     private String status;
-    private String adminId;
+    private LocalDateTime createTime;
+
+    // --- 辅助字段 (用于列表查询展示) ---
+    private String vehiclePlate; // 车牌号
+    private String ownerName;    // 车主姓名
 }

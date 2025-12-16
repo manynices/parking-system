@@ -1,148 +1,174 @@
-package com.experiment.parkingsystem.service.Impl;
+package com.experiment.parkingsystem.service.impl;
 
 import com.experiment.parkingsystem.common.PaginatedResponse;
-import com.experiment.parkingsystem.dto.*;
+import com.experiment.parkingsystem.common.UserContext;
+import com.experiment.parkingsystem.dto.monthlycard.*;
 import com.experiment.parkingsystem.entity.MonthlyCard;
-import com.experiment.parkingsystem.exception.ResourceNotFoundException;
+import com.experiment.parkingsystem.entity.Vehicle;
 import com.experiment.parkingsystem.mapper.MonthlyCardMapper;
+import com.experiment.parkingsystem.mapper.VehicleMapper;
 import com.experiment.parkingsystem.service.MonthlyCardService;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Date;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class MonthlyCardServiceImpl implements MonthlyCardService {
 
-    private final MonthlyCardMapper monthlyCardMapper;
+    private final MonthlyCardMapper cardMapper;
+    private final VehicleMapper vehicleMapper;
 
-    public MonthlyCardServiceImpl(MonthlyCardMapper monthlyCardMapper) {
-        this.monthlyCardMapper = monthlyCardMapper;
+    public MonthlyCardServiceImpl(MonthlyCardMapper cardMapper, VehicleMapper vehicleMapper) {
+        this.cardMapper = cardMapper;
+        this.vehicleMapper = vehicleMapper;
     }
 
-    /**
-     * 办理新月卡
-     * @param request 创建月卡的请求体
-     * @return 创建成功后的月卡信息
-     */
+    // --- ID 转换辅助 ---
+    private Long parseId(String idStr, String prefix) {
+        if (idStr == null || !idStr.startsWith(prefix)) return null;
+        try {
+            return Long.parseLong(idStr.substring(prefix.length()));
+        } catch (NumberFormatException e) { return null; }
+    }
+
+    private String formatId(Long id, String prefix) {
+        if (id == null) return null;
+        return prefix + String.format("%03d", id);
+    }
+
+    private MonthlyCardResponse convertToResponse(MonthlyCard card) {
+        MonthlyCardResponse res = new MonthlyCardResponse();
+        BeanUtils.copyProperties(card, res);
+        res.setCardId(formatId(card.getCardId(), "MC"));
+        res.setVehicleId(formatId(card.getVehicleId(), "V"));
+
+        if (card.getVehiclePlate() != null) res.setVehiclePlate(card.getVehiclePlate());
+        if (card.getOwnerName() != null) res.setOwnerName(card.getOwnerName());
+
+        if (res.getVehiclePlate() == null) {
+            Vehicle v = vehicleMapper.selectById(card.getVehicleId());
+            if (v != null) res.setVehiclePlate(v.getLicensePlate());
+        }
+
+        return res;
+    }
+
+    private MonthlyCardPackageResponse getPackageInfo(String type) {
+        if ("月卡".equals(type)) return new MonthlyCardPackageResponse("月卡", 1, new BigDecimal("300.00"), "");
+        if ("季卡".equals(type)) return new MonthlyCardPackageResponse("季卡", 3, new BigDecimal("850.00"), "");
+        if ("年卡".equals(type)) return new MonthlyCardPackageResponse("年卡", 12, new BigDecimal("3200.00"), "");
+        throw new RuntimeException("未知套餐类型");
+    }
+
     @Override
-    public MonthlyCardResponse createMonthlyCard(MonthlyCardCreateRequest request) {
+    @Transactional
+    public MonthlyCardResponse createCard(MonthlyCardRequest request) {
+        Long userId = UserContext.getUserId();
+        Long vehicleId = parseId(request.getVehicleId(), "V");
+
+        Vehicle v = vehicleMapper.selectById(vehicleId);
+        if (v == null) throw new RuntimeException("车辆不存在");
+
+        MonthlyCardPackageResponse pkg = getPackageInfo(request.getPackageType());
+        LocalDateTime start = request.getStartDate().atStartOfDay();
+        LocalDateTime end = start.plusMonths(pkg.getDurationMonths()).minusSeconds(1);
+
         MonthlyCard card = new MonthlyCard();
         BeanUtils.copyProperties(request, card);
-        card.setCardId(generateNewCardId());
-        card.setStatus("正常"); // 初始状态为 "正常"
-        card.setRenewTime(null); // 首次办理，没有续费时间
+        card.setVehicleId(vehicleId);
+        card.setIssueTime(LocalDateTime.now());
+        card.setValidityPeriod(end);
+        card.setStatus("正常");
+        card.setCreateTime(LocalDateTime.now());
 
-        monthlyCardMapper.insert(card);
-        return MonthlyCardResponse.fromEntity(card);
+        cardMapper.insert(card);
+        return convertToResponse(card);
     }
 
-    /**
-     * 续费月卡
-     * @param cardId 要续费的月卡ID
-     * @param request 续费请求体
-     * @return 更新后的月卡信息
-     */
     @Override
-    public MonthlyCardResponse renewMonthlyCard(String cardId, MonthlyCardRenewRequest request) {
-        // 1. 检查月卡是否存在
-        findCardByIdOrThrow(cardId);
+    @Transactional
+    public MonthlyCardResponse renewCard(String cardIdStr, MonthlyCardRenewRequest request) {
+        Long cardId = parseId(cardIdStr, "MC");
+        MonthlyCard card = cardMapper.selectById(cardId);
+        if (card == null) throw new RuntimeException("月卡不存在");
 
-        // 2. 构造用于更新的实体对象
-        MonthlyCard cardToUpdate = new MonthlyCard();
-        cardToUpdate.setCardId(cardId);
-        cardToUpdate.setValidityPeriod(request.getNewValidityPeriod());
-        cardToUpdate.setAdminId(request.getAdminId());
-        cardToUpdate.setRenewTime(new Date()); // 将当前时间设置为最近续费时间
+        MonthlyCardPackageResponse pkg = getPackageInfo(request.getPackageType());
+        LocalDateTime currentExpiry = card.getValidityPeriod();
+        LocalDateTime baseTime = currentExpiry.isBefore(LocalDateTime.now()) ? LocalDateTime.now() : currentExpiry;
+        LocalDateTime newExpiry = baseTime.plusMonths(pkg.getDurationMonths());
+        newExpiry = newExpiry.with(LocalTime.MAX);
 
-        // 3. 执行更新
-        monthlyCardMapper.update(cardToUpdate);
+        card.setPackageType(request.getPackageType());
+        card.setPaymentMethod(request.getPaymentMethod());
+        card.setAmount(pkg.getPrice());
+        card.setValidityPeriod(newExpiry);
+        card.setRenewTime(LocalDateTime.now());
 
-        // 4. 返回更新后的完整信息
-        return MonthlyCardResponse.fromEntity(findCardByIdOrThrow(cardId));
+        cardMapper.updateById(card);
+
+        MonthlyCardResponse res = convertToResponse(card);
+        res.setNewValidityPeriod(newExpiry);
+        res.setAmount(pkg.getPrice());
+        return res;
     }
 
-    /**
-     * 更新月卡状态（挂失/解挂）
-     * @param cardId 要操作的月卡ID
-     * @param request 状态更新请求体
-     * @return 更新后的月卡信息
-     */
     @Override
-    public MonthlyCardResponse updateMonthlyCardStatus(String cardId, MonthlyCardStatusRequest request) {
-        // 1. 检查月卡是否存在
-        findCardByIdOrThrow(cardId);
+    public MonthlyCardResponse updateStatus(String cardIdStr, MonthlyCardStatusRequest request) {
+        Long cardId = parseId(cardIdStr, "MC");
+        MonthlyCard card = cardMapper.selectById(cardId);
+        if (card == null) throw new RuntimeException("月卡不存在");
 
-        // 2. 构造用于更新的实体对象
-        MonthlyCard cardToUpdate = new MonthlyCard();
-        cardToUpdate.setCardId(cardId);
-        cardToUpdate.setStatus(request.getStatus());
-        cardToUpdate.setAdminId(request.getAdminId());
-
-        // 3. 执行更新
-        monthlyCardMapper.update(cardToUpdate);
-
-        // 4. 返回更新后的完整信息
-        return MonthlyCardResponse.fromEntity(findCardByIdOrThrow(cardId));
+        card.setStatus(request.getStatus());
+        cardMapper.updateById(card);
+        return convertToResponse(card);
     }
 
-    /**
-     * 分页查询月卡列表
-     * @param page 页码
-     * @param size 每页数量
-     * @param vehicleId 车辆ID (可选过滤条件)
-     * @param status 月卡状态 (可选过滤条件)
-     * @return 分页的月卡列表
-     */
+    // --- 重点修改的方法：listCards ---
     @Override
-    public PaginatedResponse<MonthlyCardResponse> getMonthlyCards(int page, int size, String vehicleId, String status) {
-        // 启动分页
+    public PaginatedResponse<MonthlyCardResponse> listCards(int page, int size, String vehicleIdStr, String status, String ownerIdStr, String userIdStr) {
         PageHelper.startPage(page, size);
-        // 根据条件查询
-        List<MonthlyCard> cards = monthlyCardMapper.findByCriteria(vehicleId, status);
-        // 用 PageInfo 包装查询结果，以获取总数等分页信息
-        PageInfo<MonthlyCard> pageInfo = new PageInfo<>(cards);
 
-        // 将实体列表转换为 DTO 列表
-        List<MonthlyCardResponse> dtoList = pageInfo.getList().stream()
-                .map(MonthlyCardResponse::fromEntity)
+        Long vehicleId = parseId(vehicleIdStr, "V");
+        Long ownerId = parseId(ownerIdStr, "O");
+        if (ownerId == null) ownerId = parseId(ownerIdStr, "U");
+        Long userId = parseId(userIdStr, "U");
+
+        List<MonthlyCard> list = cardMapper.selectList(vehicleId, status, ownerId, userId);
+        PageInfo<MonthlyCard> pageInfo = new PageInfo<>(list);
+
+        List<MonthlyCardResponse> dtoList = list.stream()
+                .map(this::convertToResponse)
                 .collect(Collectors.toList());
 
-        // 构造并返回分页响应对象
-        return new PaginatedResponse<>(pageInfo.getTotal(), dtoList);
+        // 【修改点】
+        // 1. 显式指定泛型 <MonthlyCardResponse> 解决 "无法推断类型参数"
+        // 2. 参数顺序改为 (total, list) 以匹配你的 PaginatedResponse 定义
+        return new PaginatedResponse<MonthlyCardResponse>(pageInfo.getTotal(), dtoList);
     }
 
-    /**
-     * 内部辅助方法：根据ID查找月卡，如果不存在则抛出异常
-     * @param cardId 月卡ID
-     * @return 查找到的月卡实体
-     */
-    private MonthlyCard findCardByIdOrThrow(String cardId) {
-        MonthlyCard card = monthlyCardMapper.findById(cardId);
-        if (card == null) {
-            throw new ResourceNotFoundException("MonthlyCard not found with id: " + cardId);
-        }
-        return card;
+    @Override
+    public MonthlyCardResponse getCardById(String cardIdStr) {
+        Long cardId = parseId(cardIdStr, "MC");
+        MonthlyCard card = cardMapper.selectById(cardId);
+        if (card == null) throw new RuntimeException("月卡不存在");
+        return convertToResponse(card);
     }
 
-    /**
-     * 内部辅助方法：生成新的月卡ID (例如 MC001, MC002...)
-     * @return 新的唯一月卡ID
-     */
-    private synchronized String generateNewCardId() {
-        String maxId = monthlyCardMapper.findMaxCardId();
-        // 如果没有记录或ID格式不正确，则从第一个开始
-        if (!StringUtils.hasText(maxId) || !maxId.startsWith("MC")) {
-            return "MC001";
-        }
-        // 提取数字部分并加一
-        int number = Integer.parseInt(maxId.substring(2));
-        // 格式化为三位数的字符串，不足补零
-        return "MC" + String.format("%03d", number + 1);
+    @Override
+    public List<MonthlyCardPackageResponse> getPackages() {
+        return Arrays.asList(
+                new MonthlyCardPackageResponse("月卡", 1, new BigDecimal("300.00"), "月卡套餐，有效期30天"),
+                new MonthlyCardPackageResponse("季卡", 3, new BigDecimal("850.00"), "季卡套餐，有效期90天，优惠50元"),
+                new MonthlyCardPackageResponse("年卡", 12, new BigDecimal("3200.00"), "年卡套餐，有效期365天，优惠400元")
+        );
     }
 }

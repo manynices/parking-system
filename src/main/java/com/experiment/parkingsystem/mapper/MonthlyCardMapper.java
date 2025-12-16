@@ -7,18 +7,15 @@ import java.util.List;
 
 @Mapper
 public interface MonthlyCardMapper {
+    int insert(MonthlyCard card);
 
-    int insert(MonthlyCard monthlyCard);
+    int updateById(MonthlyCard card);
 
-    MonthlyCard findById(@Param("cardId") String cardId);
+    MonthlyCard selectById(@Param("cardId") Long cardId);
 
-    // 查询列表，根据 vehicleId 和 status 进行过滤
-    List<MonthlyCard> findByCriteria(@Param("vehicleId") String vehicleId, @Param("status") String status);
-
-    int update(MonthlyCard monthlyCard);
-
-    int existsById(@Param("cardId") String cardId);
-
-    // 用于生成新的 cardId
-    String findMaxCardId();
+    // 列表查询，关联车辆和用户表
+    List<MonthlyCard> selectList(@Param("vehicleId") Long vehicleId,
+                                 @Param("status") String status,
+                                 @Param("ownerId") Long ownerId,
+                                 @Param("userId") Long userId);
 }
