@@ -1,30 +1,59 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.experiment.parkingsystem.mapper.ParkingSpaceMapper">
-    <select id="findBySpaceNo" resultType="com.experiment.parkingsystem.entity.ParkingSpace">
-        SELECT * FROM parking_space WHERE space_no = #{spaceNo}
-    </select>
-    <update id="update" parameterType="com.experiment.parkingsystem.entity.ParkingSpace">
+
+    <update id="updateStatus">
         UPDATE parking_space
-        <set>
-            <if test="status != null">status = #{status},</if>
-            vehicle_id = #{vehicleId}
-        </set>
+        SET status = #{status},
+            vehicle_id = #{vehicleId},
+            update_time = #{updateTime}
         WHERE space_no = #{spaceNo}
     </update>
-    <select id="findByCriteria" resultType="com.experiment.parkingsystem.entity.ParkingSpace">
-        SELECT * FROM parking_space
-        <where>
-            <if test="parkingArea != null and parkingArea != ''">AND parking_area = #{parkingArea}</if>
-            <if test="status != null and status != ''">AND status = #{status}</if>
-        </where>
-        ORDER BY space_no ASC
+
+    <update id="updatePurchaseInfo">
+        UPDATE parking_space
+        SET owner_id = #{ownerId},
+            purchase_time = #{purchaseTime},
+            purchase_amount = #{purchaseAmount},
+            payment_method = #{paymentMethod},
+            status = #{status},
+            update_time = #{updateTime}
+        WHERE space_no = #{spaceNo}
+    </update>
+
+    <select id="selectBySpaceNo" resultType="com.experiment.parkingsystem.entity.ParkingSpace">
+        SELECT ps.*, v.license_plate as vehicle_plate, u.name as owner_name
+        FROM parking_space ps
+                 LEFT JOIN vehicle v ON ps.vehicle_id = v.vehicle_id
+                 LEFT JOIN sys_user u ON ps.owner_id = u.user_id
+        WHERE ps.space_no = #{spaceNo}
     </select>
+
+    <select id="selectList" resultType="com.experiment.parkingsystem.entity.ParkingSpace">
+        SELECT ps.*,
+        v.license_plate as vehicle_plate,
+        v.vehicle_class as vehicle_class,
+        u.name as owner_name
+        FROM parking_space ps
+        LEFT JOIN vehicle v ON ps.vehicle_id = v.vehicle_id
+        LEFT JOIN sys_user u ON ps.owner_id = u.user_id
+        <where>
+            <if test="parkingArea != null and parkingArea != ''">AND ps.parking_area = #{parkingArea}</if>
+            <if test="status != null and status != ''">AND ps.status = #{status}</if>
+            <if test="spaceNo != null and spaceNo != ''">AND ps.space_no = #{spaceNo}</if>
+            <if test="spaceType != null and spaceType != ''">AND ps.space_type = #{spaceType}</if>
+            <if test="ownerId != null">AND ps.owner_id = #{ownerId}</if>
+        </where>
+        ORDER BY ps.space_no ASC
+    </select>
+
     <select id="countByAreaAndStatus" resultType="long">
         SELECT COUNT(*) FROM parking_space
         <where>
             <if test="parkingArea != null and parkingArea != ''">AND parking_area = #{parkingArea}</if>
             <if test="status != null and status != ''">AND status = #{status}</if>
+            <if test="spaceType != null and spaceType != ''">AND space_type = #{spaceType}</if>
         </where>
     </select>
+
 </mapper>

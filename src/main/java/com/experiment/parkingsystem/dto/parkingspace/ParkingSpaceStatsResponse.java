@@ -1,13 +1,13 @@
-package com.experiment.parkingsystem.dto;
+package com.experiment.parkingsystem.dto.parkingspace;
 
 import lombok.Data;
 import java.util.List;
 
 @Data
-public class ParkingAreaStatusResponse {
+public class ParkingSpaceStatsResponse {
     private String parkingArea;
     private Long total;
     private Long free;
     private Long occupied;
-    private List<ParkingSpaceResponse> spaceList;
+    private List<ParkingSpaceItemResponse> spaceList;
 }
