@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.experiment.parkingsystem.mapper.UserMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="userId">
+        INSERT INTO sys_user (phone, account, password, status, is_owner_verified, create_time)
+        VALUES (#{phone}, #{account}, #{password}, #{status}, #{isOwnerVerified}, #{createTime})
+    </insert>
+
+    <select id="selectByAccount" resultType="com.experiment.parkingsystem.entity.User">
+        SELECT * FROM sys_user WHERE account = #{account}
+    </select>
+
+    <select id="selectById" resultType="com.experiment.parkingsystem.entity.User">
+        SELECT * FROM sys_user WHERE user_id = #{userId}
+    </select>
+
+    <update id="updateById">
+        UPDATE sys_user
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="idCard != null">id_card = #{idCard},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="avatar != null">avatar = #{avatar},</if>
+            <if test="lastLoginTime != null">last_login_time = #{lastLoginTime},</if>
+            <if test="password != null">password = #{password},</if>
+        </set>
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="updatePassword">
+        UPDATE sys_user SET password = #{password} WHERE account = #{account}
+    </update>
+
+    <!-- 移除了 LIMIT 和 OFFSET，PageHelper 会自动添加 -->
+    <select id="selectList" resultType="com.experiment.parkingsystem.entity.User">
+        SELECT * FROM sys_user
+        <where>
+            <if test="account != null and account != ''">AND account LIKE CONCAT('%', #{account}, '%')</if>
+            <if test="phone != null and phone != ''">AND phone LIKE CONCAT('%', #{phone}, '%')</if>
+            <if test="name != null and name != ''">AND name LIKE CONCAT('%', #{name}, '%')</if>
+            <if test="isOwnerVerified != null">AND is_owner_verified = #{isOwnerVerified}</if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+</mapper>
