@@ -1,13 +1,18 @@
 package com.experiment.parkingsystem.service;
 
 import com.experiment.parkingsystem.common.PaginatedResponse;
-import com.experiment.parkingsystem.dto.*;
+import com.experiment.parkingsystem.dto.administrator.*;
 
 public interface AdministratorService {
-    AdministratorResponse createAdministrator(AdministratorCreateRequest request);
-    AdministratorLoginResponse login(AdministratorLoginRequest request);
-    PaginatedResponse<AdministratorResponse> getAdministrators(int page, int size);
-    AdministratorResponse getAdministratorById(String adminId);
-    AdministratorResponse updateAdministrator(String adminId, AdministratorUpdateRequest request);
-    void deleteAdministrator(String adminId);
+    AdminResponse createAdmin(AdminCreateRequest request);
+
+    AdminLoginResponse login(AdminLoginRequest request);
+
+    PaginatedResponse<AdminResponse> listAdmins(int page, int size, String name);
+
+    AdminResponse getAdminById(String adminIdStr);
+
+    AdminResponse updateAdmin(String adminIdStr, AdminUpdateRequest request);
+
+    void deleteAdmin(String adminIdStr);
 }

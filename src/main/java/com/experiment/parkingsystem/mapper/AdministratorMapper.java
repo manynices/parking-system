@@ -7,21 +7,15 @@ import java.util.List;
 
 @Mapper
 public interface AdministratorMapper {
+    int insert(Administrator admin);
 
-    int insert(Administrator administrator);
+    int update(Administrator admin);
 
-    Administrator findById(@Param("adminId") String adminId);
+    int deleteById(@Param("adminId") Long adminId);
 
-    Administrator findByAccount(@Param("account") String account);
+    Administrator selectById(@Param("adminId") Long adminId);
 
-    List<Administrator> findAll();
+    Administrator selectByAccount(@Param("account") String account);
 
-    int update(Administrator administrator);
-
-    int deleteById(@Param("adminId") String adminId);
-
-    int existsById(@Param("adminId") String adminId);
-
-    // 用于生成新的 adminId
-    String findMaxAdminId();
+    List<Administrator> selectList(@Param("name") String name);
 }

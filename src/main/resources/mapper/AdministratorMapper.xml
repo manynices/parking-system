@@ -1,47 +1,41 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.experiment.parkingsystem.mapper.AdministratorMapper">
 
-    <insert id="insert" parameterType="com.experiment.parkingsystem.entity.Administrator">
-        INSERT INTO administrator (admin_id, name, account, password, permission_level)
-        VALUES (#{adminId}, #{name}, #{account}, #{password}, #{permissionLevel})
+    <insert id="insert" useGeneratedKeys="true" keyProperty="adminId">
+        INSERT INTO sys_admin (account, password, name, permission_level, create_time, update_time)
+        VALUES (#{account}, #{password}, #{name}, #{permissionLevel}, #{createTime}, #{updateTime})
     </insert>
 
-    <select id="findById" resultType="com.experiment.parkingsystem.entity.Administrator">
-        SELECT admin_id, name, account, password, permission_level FROM administrator WHERE admin_id = #{adminId}
-    </select>
-
-    <select id="findByAccount" resultType="com.experiment.parkingsystem.entity.Administrator">
-        SELECT admin_id, name, account, password, permission_level FROM administrator WHERE account = #{account}
-    </select>
-
-    <select id="findAll" resultType="com.experiment.parkingsystem.entity.Administrator">
-        SELECT admin_id, name, account, permission_level FROM administrator ORDER BY admin_id ASC
-    </select>
-
-    <update id="update" parameterType="com.experiment.parkingsystem.entity.Administrator">
-        UPDATE administrator
+    <update id="update">
+        UPDATE sys_admin
         <set>
             <if test="name != null">name = #{name},</if>
             <if test="password != null">password = #{password},</if>
             <if test="permissionLevel != null">permission_level = #{permissionLevel},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
         </set>
         WHERE admin_id = #{adminId}
     </update>
 
     <delete id="deleteById">
-        DELETE FROM administrator WHERE admin_id = #{adminId}
+        DELETE FROM sys_admin WHERE admin_id = #{adminId}
     </delete>
 
-    <select id="existsById" resultType="int">
-        SELECT COUNT(*) FROM administrator WHERE admin_id = #{adminId}
+    <select id="selectById" resultType="com.experiment.parkingsystem.entity.Administrator">
+        SELECT * FROM sys_admin WHERE admin_id = #{adminId}
     </select>
 
-    <select id="findMaxAdminId" resultType="string">
-        SELECT MAX(admin_id) FROM administrator
+    <select id="selectByAccount" resultType="com.experiment.parkingsystem.entity.Administrator">
+        SELECT * FROM sys_admin WHERE account = #{account}
+    </select>
+
+    <select id="selectList" resultType="com.experiment.parkingsystem.entity.Administrator">
+        SELECT * FROM sys_admin
+        <where>
+            <if test="name != null and name != ''">AND name LIKE CONCAT('%', #{name}, '%')</if>
+        </where>
+        ORDER BY create_time DESC
     </select>
 
 </mapper>

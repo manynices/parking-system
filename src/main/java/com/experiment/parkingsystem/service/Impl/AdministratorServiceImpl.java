@@ -1,122 +1,126 @@
-package com.experiment.parkingsystem.service.Impl;
+package com.experiment.parkingsystem.service.impl;
 
 import com.experiment.parkingsystem.common.PaginatedResponse;
-import com.experiment.parkingsystem.dto.*;
+import com.experiment.parkingsystem.dto.administrator.*;
 import com.experiment.parkingsystem.entity.Administrator;
-import com.experiment.parkingsystem.exception.AuthenticationException;
-import com.experiment.parkingsystem.exception.ResourceNotFoundException;
 import com.experiment.parkingsystem.mapper.AdministratorMapper;
 import com.experiment.parkingsystem.service.AdministratorService;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class AdministratorServiceImpl implements AdministratorService {
 
-    private final AdministratorMapper administratorMapper;
+    private final AdministratorMapper adminMapper;
 
-    public AdministratorServiceImpl(AdministratorMapper administratorMapper) {
-        this.administratorMapper = administratorMapper;
+    public AdministratorServiceImpl(AdministratorMapper adminMapper) {
+        this.adminMapper = adminMapper;
+    }
+
+    // --- ID 辅助 ---
+    private Long parseId(String idStr) {
+        if (idStr == null || !idStr.startsWith("A")) return null;
+        try {
+            return Long.parseLong(idStr.substring(1));
+        } catch (NumberFormatException e) { return null; }
+    }
+    private String formatId(Long id) {
+        if (id == null) return null;
+        return "A" + String.format("%03d", id);
+    }
+
+    private AdminResponse convertToResponse(Administrator admin) {
+        AdminResponse res = new AdminResponse();
+        BeanUtils.copyProperties(admin, res);
+        res.setAdminId(formatId(admin.getAdminId()));
+        return res;
     }
 
     @Override
-    public AdministratorResponse createAdministrator(AdministratorCreateRequest request) {
+    @Transactional
+    public AdminResponse createAdmin(AdminCreateRequest request) {
+        // 1. 检查账号重复
+        if (adminMapper.selectByAccount(request.getAccount()) != null) {
+            throw new RuntimeException("管理员账号已存在");
+        }
+
         Administrator admin = new Administrator();
         BeanUtils.copyProperties(request, admin);
-        admin.setAdminId(generateNewAdminId());
+        admin.setCreateTime(LocalDateTime.now());
+        admin.setUpdateTime(LocalDateTime.now());
+        // 注意：实际生产需加密密码
 
-        // 在实际应用中，这里必须对密码进行加密
-        // 例如：admin.setPassword(passwordEncoder.encode(request.getPassword()));
-        admin.setPassword(request.getPassword()); // 简化处理
-
-        administratorMapper.insert(admin);
-        return AdministratorResponse.fromEntity(admin);
+        adminMapper.insert(admin);
+        return convertToResponse(admin);
     }
 
     @Override
-    public AdministratorLoginResponse login(AdministratorLoginRequest request) {
-        Administrator admin = administratorMapper.findByAccount(request.getAccount());
-        if (admin == null) {
-            throw new AuthenticationException("账号或密码错误");
+    public AdminLoginResponse login(AdminLoginRequest request) {
+        Administrator admin = adminMapper.selectByAccount(request.getAccount());
+        if (admin == null || !admin.getPassword().equals(request.getPassword())) {
+            throw new RuntimeException("账号或密码错误");
         }
 
-        // 在实际应用中，这里需要验证加密后的密码
-        // if (!passwordEncoder.matches(request.getPassword(), admin.getPassword())) {
-        if (!request.getPassword().equals(admin.getPassword())) { // 简化处理
-            throw new AuthenticationException("账号或密码错误");
-        }
-
-        // 登录成功，生成并返回 Token
-        // 这里的 Token 生成逻辑可以根据实际需要实现（例如使用 JWT）
-        String token = "FAKE_JWT_TOKEN_FOR_" + admin.getAccount();
-        return new AdministratorLoginResponse(admin.getAdminId(), admin.getName(), token);
+        AdminLoginResponse res = new AdminLoginResponse();
+        BeanUtils.copyProperties(admin, res);
+        res.setAdminId(formatId(admin.getAdminId()));
+        // 生成模拟 Token
+        res.setToken("ADMIN_JWT_TOKEN_" + admin.getAdminId());
+        return res;
     }
 
-
     @Override
-    public PaginatedResponse<AdministratorResponse> getAdministrators(int page, int size) {
+    public PaginatedResponse<AdminResponse> listAdmins(int page, int size, String name) {
         PageHelper.startPage(page, size);
-        List<Administrator> admins = administratorMapper.findAll();
-        PageInfo<Administrator> pageInfo = new PageInfo<>(admins);
+        List<Administrator> list = adminMapper.selectList(name);
+        PageInfo<Administrator> pageInfo = new PageInfo<>(list);
 
-        List<AdministratorResponse> dtoList = pageInfo.getList().stream()
-                .map(AdministratorResponse::fromEntity)
+        List<AdminResponse> dtoList = list.stream()
+                .map(this::convertToResponse)
                 .collect(Collectors.toList());
 
-        return new PaginatedResponse<>(pageInfo.getTotal(), dtoList);
+        // 适配您的 (total, list) 构造函数
+        return new PaginatedResponse<AdminResponse>(pageInfo.getTotal(), dtoList);
     }
 
     @Override
-    public AdministratorResponse getAdministratorById(String adminId) {
-        Administrator admin = administratorMapper.findById(adminId);
-        if (admin == null) {
-            throw new ResourceNotFoundException("Administrator not found with id: " + adminId);
-        }
-        return AdministratorResponse.fromEntity(admin);
+    public AdminResponse getAdminById(String adminIdStr) {
+        Long id = parseId(adminIdStr);
+        Administrator admin = adminMapper.selectById(id);
+        if (admin == null) throw new RuntimeException("管理员不存在");
+        return convertToResponse(admin);
     }
 
     @Override
-    public AdministratorResponse updateAdministrator(String adminId, AdministratorUpdateRequest request) {
-        Administrator existingAdmin = administratorMapper.findById(adminId);
-        if (existingAdmin == null) {
-            throw new ResourceNotFoundException("Administrator not found with id: " + adminId);
+    @Transactional
+    public AdminResponse updateAdmin(String adminIdStr, AdminUpdateRequest request) {
+        Long id = parseId(adminIdStr);
+        Administrator admin = adminMapper.selectById(id);
+        if (admin == null) throw new RuntimeException("管理员不存在");
+
+        if (request.getName() != null) admin.setName(request.getName());
+        if (request.getPermissionLevel() != null) admin.setPermissionLevel(request.getPermissionLevel());
+        if (request.getPassword() != null && !request.getPassword().isEmpty()) {
+            admin.setPassword(request.getPassword());
         }
+        admin.setUpdateTime(LocalDateTime.now());
 
-        Administrator adminToUpdate = new Administrator();
-        BeanUtils.copyProperties(request, adminToUpdate);
-        adminToUpdate.setAdminId(adminId);
-
-        // 如果请求中包含密码，则进行加密处理
-        if (StringUtils.hasText(request.getPassword())) {
-            // adminToUpdate.setPassword(passwordEncoder.encode(request.getPassword()));
-            adminToUpdate.setPassword(request.getPassword()); // 简化处理
-        }
-
-        administratorMapper.update(adminToUpdate);
-
-        return AdministratorResponse.fromEntity(administratorMapper.findById(adminId));
+        adminMapper.update(admin);
+        return convertToResponse(admin);
     }
 
     @Override
-    public void deleteAdministrator(String adminId) {
-        if (administratorMapper.existsById(adminId) == 0) {
-            throw new ResourceNotFoundException("Administrator not found with id: " + adminId);
-        }
-        administratorMapper.deleteById(adminId);
-    }
-
-    private synchronized String generateNewAdminId() {
-        String maxId = administratorMapper.findMaxAdminId();
-        if (!StringUtils.hasText(maxId)) {
-            return "A001";
-        }
-        int number = Integer.parseInt(maxId.substring(1));
-        return "A" + String.format("%03d", number + 1);
+    @Transactional
+    public void deleteAdmin(String adminIdStr) {
+        Long id = parseId(adminIdStr);
+        // 不能删除自己，或者检查权限（这里省略，实际项目中需要校验）
+        adminMapper.deleteById(id);
     }
 }
