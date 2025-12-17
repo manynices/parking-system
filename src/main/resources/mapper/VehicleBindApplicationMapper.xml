@@ -1,10 +1,30 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.experiment.parkingsystem.mapper.VehicleBindApplicationMapper">
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="applicationId">
         INSERT INTO vehicle_bind_application
         (user_id, license_plate, vehicle_type, vehicle_brand, vehicle_color, proof_images, remark, status, create_time)
         VALUES
-        (#{userId}, #{licensePlate}, #{vehicleType}, #{vehicleBrand}, #{vehicleColor}, #{proofImages}, #{remark}, #{status}, #{createTime})
+            (#{userId}, #{licensePlate}, #{vehicleType}, #{vehicleBrand}, #{vehicleColor}, #{proofImages}, #{remark}, #{status}, #{createTime})
     </insert>
+
+    <!-- 【新增】 -->
+    <update id="updateStatus">
+        UPDATE vehicle_bind_application
+        SET status = #{status},
+            remark = #{remark}
+        WHERE application_id = #{applicationId}
+    </update>
+
+    <select id="selectById" resultType="com.experiment.parkingsystem.entity.VehicleBindApplication">
+        SELECT * FROM vehicle_bind_application WHERE application_id = #{applicationId}
+    </select>
+
+    <select id="selectPendingList" resultType="com.experiment.parkingsystem.entity.VehicleBindApplication">
+        SELECT * FROM vehicle_bind_application
+        WHERE status = '待审核'
+        ORDER BY create_time ASC
+    </select>
+
 </mapper>
