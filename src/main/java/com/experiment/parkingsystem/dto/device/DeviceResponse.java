@@ -1,13 +1,13 @@
-package com.experiment.parkingsystem.entity;
+package com.experiment.parkingsystem.dto.device;
 
 import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class Device {
-    private Long deviceId;
-    private String deviceNo;
+public class DeviceResponse {
+    private String deviceId; // "D001"
     private String deviceType;
+    private String deviceNo;
     private String installationLocation;
     private String parkingArea;
     private String status;

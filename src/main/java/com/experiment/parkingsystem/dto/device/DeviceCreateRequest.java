@@ -1,4 +1,4 @@
-package com.experiment.parkingsystem.dto;
+package com.experiment.parkingsystem.dto.device;
 
 import lombok.Data;
 

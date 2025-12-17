@@ -9,15 +9,11 @@ import java.util.List;
 public interface DeviceMapper {
     int insert(Device device);
 
-    Device findById(@Param("deviceId") String deviceId);
+    int updateStatus(Device device);
 
-    List<Device> findByCriteria(
-            @Param("deviceType") String deviceType,
-            @Param("status") String status,
-            @Param("parkingArea") String parkingArea
-    );
+    Device selectById(@Param("deviceId") Long deviceId);
 
-    int update(Device device);
-
-    String findMaxDeviceId();
+    List<Device> selectList(@Param("deviceType") String deviceType,
+                            @Param("status") String status,
+                            @Param("parkingArea") String parkingArea);
 }
